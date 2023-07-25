@@ -4,10 +4,12 @@ const cardSchema = new Schema(
   {
     code: String,
     name: String,
-    displacement: Number,
+    cylinder: Number,
     cylinders: Number,
+    horsepower: Number,
     revolutions: Number,
     weight: Number,
+    img: String,
   }
 );
 

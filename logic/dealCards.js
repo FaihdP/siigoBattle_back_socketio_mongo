@@ -1,5 +1,5 @@
 export default function dealCards(players) {
-  // Generate the cards in random postion
+  // Generate the cards in random position
   function generateRandomCards() {
     let array = [];
     const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
