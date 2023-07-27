@@ -7,6 +7,7 @@ import getCards from "./logic/getCards.js";
 
 /** Enums */
 import RoomConnectionStatus from "../client/src/logic/enums/RoomConnectionStatus.js";
+import firstPlayer from "./logic/firstPlayer.js";
 
 const server = createServer(app);
 const io = new SocketServer(server, {
@@ -96,9 +97,12 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("client: getUsersRoom", (codeRoom = null) => {
-    uniqueMessage("server: updateUsersRoom", usersRoom);
-    if (codeRoom) socket.join(codeRoom);
+  /**
+   * Send a update of users in the room.
+   * @param {String} codeRoom - The code room of the user
+   */
+  socket.on("client: getUsersRoom", (codeRoom) => {
+    uniqueMessage("server: updateUsersRoom", usersRoom, codeRoom);
   });
 
   socket.on("client: startParty", async (codeRoom) => {
@@ -106,6 +110,10 @@ io.on("connection", (socket) => {
     await getCards(usersRoom);
     io.to(codeRoom).emit("server: startParty");
   });
+
+  socket.on("client: startParty-finish", (codeRoom) => {
+    uniqueMessage("client: chooserUser", firstPlayer(usersRoom), codeRoom)
+  })
 
   socket.on("client: getCard", async (userId) => {
     const user = usersRoom.find((user) => user.id === userId);
