@@ -1,11 +1,17 @@
-import { generateCards } from "./dealCards.js";
+import generateCards from "./generateCards.js";
 
 export default function firstPlayer(players) {
   const cards = generateCards()
 
   let firstsCardsPlayers = []
   for (const player of players) {
-    firstsCardsPlayers.push({ id: player.id, cardValue: cards.indexOf(player.cards[0])})
+    const [card] = player.cards.slice(-1)
+    firstsCardsPlayers.push({ 
+        id: player.id, 
+        cardValue: cards.indexOf(card.code),
+        entryOrder: player.entryOrder
+      }
+    )
   }
 
   // Check what is the grater card value in the array, and return the object with the user id and card value
@@ -15,6 +21,6 @@ export default function firstPlayer(players) {
       greaterCardPlayer = firstsCardsPlayers[i];
     }
   }
-
-  return greaterCardPlayer.id
+  
+  return greaterCardPlayer
 }

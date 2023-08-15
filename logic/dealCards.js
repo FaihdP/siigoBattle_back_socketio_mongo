@@ -1,20 +1,13 @@
-export function generateCards() {
-  let array = [];
-  const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 8; j++) {
-      array.push(`${i + 1}${letters[j]}`);
-    }
-  }
-  return array;
-}
+import generateCards from "./generateCards.js";
+import Card from "../database/Card.js";
 
-export default function dealCards(players) {
+export default async function dealCards(players) {
   const numberPlayers = players.length;
-  const cardsPerPlayer = Math.floor(32 / numberPlayers);
+  const numberCards = await Card.countDocuments({})
+  const cardsPerPlayer = Math.floor(numberCards / numberPlayers);
   
   // Generate the cards in random position
-  const randomCards = generateCards().sort(() => Math.random() - 0.5);;
+  const randomCards = generateCards().sort(() => Math.random() - 0.5);
 
   // Deal the cards to players
   let k = 0;

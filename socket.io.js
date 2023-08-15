@@ -4,16 +4,20 @@ import dealCards from "./logic/dealCards.js";
 import app from "./index.js";
 import { v4 as uuidv4 } from "uuid";
 import getCards from "./logic/getCards.js";
+import firstPlayer from "./logic/firstPlayer.js";
 
 /** Enums */
-import RoomConnectionStatus from "../client/src/logic/enums/RoomConnectionStatus.js";
-import firstPlayer from "./logic/firstPlayer.js";
+import { RoomConnectionStatus, RoundStatus } from "../client/src/logic/enums/Enums.js";
 
 const server = createServer(app);
 const io = new SocketServer(server, {
   cors: {
     origin: "http://localhost:5173",
   },
+  serveClient: false,
+  pingInterval: 20000,
+  pingTimeout: 15000,
+  cookie: false,
 });
 
 server.listen(4000, () => console.log("Server on port", 4000));
@@ -47,6 +51,14 @@ io.on("connection", (socket) => {
    */
   socket.on("client: newUser", () => {
     uniqueMessage("server: codeConnection", uuidv4());
+  });
+
+  /**
+   * Connect to room again
+   * @param {String} codeRoom - Room code
+   */
+  socket.on("client: reconnectRoom", (codeRoom) => {
+    socket.join(codeRoom);
   });
 
   /**
@@ -105,17 +117,35 @@ io.on("connection", (socket) => {
     uniqueMessage("server: updateUsersRoom", usersRoom, codeRoom);
   });
 
+  /**
+   * When the party owner starts the party, cards are dealt, cards from the database are brought in
+   * and an event is sent to all players in the room
+   * @param {String} codeRoom - The code room of the user
+   */
   socket.on("client: startParty", async (codeRoom) => {
-    dealCards(usersRoom);
-    await getCards(usersRoom);
-    io.to(codeRoom).emit("server: startParty");
+    try {
+      await dealCards(usersRoom);
+      await getCards(usersRoom);
+    } finally {
+      io.to(codeRoom).emit("server: startParty");
+    }
   });
 
-  socket.on("client: startParty-finish", (codeRoom) => {
-    uniqueMessage("client: chooserUser", firstPlayer(usersRoom), codeRoom)
-  })
+  /**
+   * When the party owner starts the party, cards are dealt, cards from the database are brought in
+   * and an event is sent to all players in the room
+   * @param {String} codeRoom - The code room of the user
+   */
+  socket.on("client: getFirstChooser", (codeRoom) => {
+    const player = firstPlayer(usersRoom)
+    io.to(codeRoom).emit("server: chooserUser", player.id);
+  });
 
-  socket.on("client: getCard", async (userId) => {
+  /**
+   *
+   * @param {String} userId - The user id
+   */
+  socket.on("client: getCard", (userId) => {
     const user = usersRoom.find((user) => user.id === userId);
     let card = null;
     if (user) card = user.cards[user.cards.length - 1];
@@ -128,12 +158,52 @@ io.on("connection", (socket) => {
     uniqueMessage("client: nextCard-finish", null, user.codeRoom);
   });
 
-  socket.on("client: reconnectRoom", (codeRoom) => {
-    socket.join(codeRoom);
+  socket.on("client: choosedFeature", ({ feature, userId }) => {
+    let user = usersRoom.find((user) => user.id === userId);
+    let message = { status: RoundStatus.PLAYER_WON };
+    let greaterFeature = user.cards[user.cards.length - 1][feature];
+    let cardsWon = [];
+
+    for (const userRoom of usersRoom) {
+      if (user.id === userRoom.id) continue
+
+      cardsWon.push(userRoom.cards[user.cards.length - 1]);
+
+      const valueFeature = userRoom.cards[user.cards.length - 1][feature];
+
+      if (valueFeature === greaterFeature) {
+        message.status = RoundStatus.DRAW
+        break;
+      }
+      
+      if (valueFeature > greaterFeature) {
+        message.user = userRoom;
+        greaterFeature = valueFeature;
+      }
+    }
+
+    if (message.status !== RoundStatus.DRAW) {
+      user.cardsWon = cardsWon;
+
+      console.log("User choosed " + user.name + ": " + user.entryOrder)
+
+      usersRoom.map((userRoom) => {
+        console.log("User " + userRoom.name + ": " + userRoom.entryOrder)
+      }) 
+
+      let nextUser = usersRoom.find((userRoom) => user.entryOrder < userRoom.entryOrder);
+      console.log(nextUser)
+      if (!nextUser) nextUser = usersRoom[0]
+
+      console.log("Next user:", nextUser.name)
+
+      io.to(user.codeRoom).emit("client: chooserUser", nextUser.id);
+    }
+
+    io.to(user.codeRoom).emit("server: winnerRound", message);
   });
 
-  socket.on("client: userDisconnect", () => {
-    console.log("User disconnect");
-  });
-
+  //socket.on("disconnect", (reason) => {
+  //  console.log("User disconnect, because:", reason);
+  //});
 });
