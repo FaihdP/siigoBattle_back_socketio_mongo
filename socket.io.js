@@ -96,7 +96,7 @@ io.on("connection", (socket) => {
         usersRoom = users;
         connection = {
           status: RoomConnectionStatus.SUCCESSFUL,
-          playersNumber: usersRoom.length,
+          playersNumber: users.length,
         };
       }
     });
@@ -132,8 +132,8 @@ io.on("connection", (socket) => {
   });
 
   /**
-   * When the party owner starts the party, cards are dealt, cards from the database are brought in
-   * and an event is sent to all players in the room
+   * Get first chooser in the party. The first chooser will be the player who has the card with the
+   * greatest code (1A, 1B, 1C, ... 2A, 2B, ...). 
    * @param {String} codeRoom - The code room of the user
    */
   socket.on("client: getFirstChooser", (codeRoom) => {
@@ -142,7 +142,7 @@ io.on("connection", (socket) => {
   });
 
   /**
-   *
+   * Get the last user card
    * @param {String} userId - The user id
    */
   socket.on("client: getCard", (userId) => {
@@ -152,17 +152,26 @@ io.on("connection", (socket) => {
     uniqueMessage("server: updateCard", card, user?.codeRoom);
   });
 
+  /**
+   * Delete the last user card
+   * @param {String} userId - The user id
+   */
   socket.on("client: nextCard", (userId) => {
     const user = usersRoom.find((userRoom) => userRoom.id === userId);
     user.cards.pop();
     uniqueMessage("client: nextCard-finish", null, user.codeRoom);
   });
 
+  /**
+   * Get the winner player in the round and who is the next player will choose in the next round
+   * @param {String} feature - The feature choosed
+   * @param {String} userId - The user id
+   */
   socket.on("client: choosedFeature", ({ feature, userId }) => {
     let user = usersRoom.find((user) => user.id === userId);
-    let message = { status: RoundStatus.PLAYER_WON };
+    let message = { status: RoundStatus.PLAYER_WON, user };
     let greaterFeature = user.cards[user.cards.length - 1][feature];
-    let cardsWon = [];
+    let cardsWon = [user.cards[user.cards.length - 1]];
 
     for (const userRoom of usersRoom) {
       if (user.id === userRoom.id) continue
@@ -182,6 +191,7 @@ io.on("connection", (socket) => {
       }
     }
 
+    let nextUser = null;
     if (message.status !== RoundStatus.DRAW) {
       user.cardsWon = cardsWon;
 
@@ -192,14 +202,14 @@ io.on("connection", (socket) => {
       }) 
 
       let nextUser = usersRoom.find((userRoom) => user.entryOrder < userRoom.entryOrder);
-      console.log(nextUser)
+      console.log(nextUser?.name)
       if (!nextUser) nextUser = usersRoom[0]
 
       console.log("Next user:", nextUser.name)
 
-      io.to(user.codeRoom).emit("client: chooserUser", nextUser.id);
     }
-
+    
+    io.to(user.codeRoom).emit("client: chooserUser", nextUser || message.user);
     io.to(user.codeRoom).emit("server: winnerRound", message);
   });
 
