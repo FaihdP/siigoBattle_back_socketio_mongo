@@ -2,7 +2,6 @@ import express from "express";
 import morgan from "morgan";
 import cors from "cors";
 import "./database/database.js"
-import Card from "./database/Card.js";
 
 const app = express();
 

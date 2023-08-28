@@ -1,8 +1,9 @@
 import { Server as SocketServer } from "socket.io";
 import { createServer } from "http";
-import dealCards from "./logic/dealCards.js";
 import app from "./index.js";
 import { v4 as uuidv4 } from "uuid";
+
+import dealCards from "./logic/dealCards.js";
 import getCards from "./logic/getCards.js";
 import firstPlayer from "./logic/firstPlayer.js";
 
@@ -92,6 +93,7 @@ io.on("connection", (socket) => {
           return;
         }
 
+        user.entryOrder = users.length + 1;
         users.push(user);
         usersRoom = users;
         connection = {
@@ -191,25 +193,12 @@ io.on("connection", (socket) => {
       }
     }
 
-    let nextUser = null;
-    if (message.status !== RoundStatus.DRAW) {
-      user.cardsWon = cardsWon;
+    if (message.status !== RoundStatus.DRAW) user.cardsWon = cardsWon
 
-      console.log("User choosed " + user.name + ": " + user.entryOrder)
-
-      usersRoom.map((userRoom) => {
-        console.log("User " + userRoom.name + ": " + userRoom.entryOrder)
-      }) 
-
-      let nextUser = usersRoom.find((userRoom) => user.entryOrder < userRoom.entryOrder);
-      console.log(nextUser?.name)
-      if (!nextUser) nextUser = usersRoom[0]
-
-      console.log("Next user:", nextUser.name)
-
-    }
+    let nextUser = usersRoom.find((userRoom) => user.entryOrder < userRoom.entryOrder);
+    if (!nextUser) nextUser = usersRoom[0]
     
-    io.to(user.codeRoom).emit("client: chooserUser", nextUser || message.user);
+    io.to(user.codeRoom).emit("server: chooserUser", nextUser.id);
     io.to(user.codeRoom).emit("server: winnerRound", message);
   });
 
