@@ -1,7 +1,9 @@
 import express from "express";
 import morgan from "morgan";
 import cors from "cors";
-import "./database/database.js"
+import { initializeSocket } from "./socket.io.js";
+import { createServer } from "http";
+import "../database/database.js"
 
 const app = express();
 
@@ -9,7 +11,11 @@ const app = express();
 app.use(morgan("dev"));
 app.use(cors());
 
-export default app;
+const server = createServer(app); 
+
+initializeSocket(server);
+
+server.listen(4000, () => console.log("Server on port", 4000));
 
 // Test cards
 /*(() => {

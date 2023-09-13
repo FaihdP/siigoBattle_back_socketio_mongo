@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon socket.io.js"
+    "dev": "nodemon src/app.js"
   },
   "author": "FaihdP",
   "license": "ISC",

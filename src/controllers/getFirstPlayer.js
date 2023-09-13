@@ -1,15 +1,14 @@
 import generateCards from "./generateCards.js";
 
-export default function firstPlayer(players) {
+export default function getFirstPlayer(usersMap) {
   const cards = generateCards()
 
   let firstsCardsPlayers = []
-  for (const player of players) {
+  for (const [key, player] of usersMap) {
     const [card] = player.cards.slice(-1)
     firstsCardsPlayers.push({ 
         id: player.id, 
         cardValue: cards.indexOf(card.code),
-        entryOrder: player.entryOrder
       }
     )
   }
